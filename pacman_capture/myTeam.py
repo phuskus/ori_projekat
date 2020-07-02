@@ -32,7 +32,6 @@ def createTeam(firstIndex, secondIndex, isRed,
     team, initialized using firstIndex and secondIndex as their agent
     index numbers.  isRed is True if the red team is being created, and
     will be False if the blue team is being created.
-
     As a potentially helpful development aid, this function can take
     additional string-valued keyword arguments ("first" and "second" are
     such arguments in the case of this function), which will come from
@@ -49,9 +48,9 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
-weightsOffensive = {'carryingFood': -16.25331883657448, 'nearestDefender': -21.609965725230644, 'collectedFood': -15.245948843851977, 'score': 0.8019407449751893, 'nearestFood': -10.76506022595647, 'returnedFood': 1.213071849861905}
+weightsOffensive = {'carryingFood': 15.814672361697648, 'danger': -19.253369171930068, 'collectedFood': 58.61966962071899, 'score': 42.804997259021086, 'dToFood': -4.724655824899629}
 
-weightsDeffensive = {'nearestInvader': -0.015705340340531036, 'lostFood': -6.882599605396271, 'score': 3.521551284766313}
+weightsDeffensive = {'nearInvader': 6.065403234386981, 'lostFood': -6.168767332377552, 'score': 18.510301823143802}
 
 dirToVec = {
     "North": (0.0, 1.0),
@@ -200,7 +199,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
     def registerInitialState(self, gameState):
         StegnutiAgent.registerInitialState(self, gameState)
         self.timeElapsed = 0
-        self.override = False
+        self.override = True
         self.overrideWeights = weightsOffensive
 
     def getNearestFoodDistance(self, state):
@@ -327,7 +326,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
 class DefensiveStegnutiAgent(StegnutiAgent):
     def registerInitialState(self, gameState):
         StegnutiAgent.registerInitialState(self, gameState)
-        self.override = False
+        self.override = True
         self.overrideWeights = weightsDeffensive
 
     def getNearestFoodDistance(self, state):
@@ -421,142 +420,3 @@ class DefensiveStegnutiAgent(StegnutiAgent):
         self.alpha -= self.alphaDecay
         self.alpha = max(self.alpha, self.minAlpha)
         CaptureAgent.final(self, gameState)
-
-class ReflexCaptureAgent(CaptureAgent):
-    """
-    A base class for reflex agents that chooses score-maximizing actions
-    """
-
-    def registerInitialState(self, gameState):
-        self.start = gameState.getAgentPosition(self.index)
-        CaptureAgent.registerInitialState(self, gameState)
-
-    def chooseAction(self, gameState):
-        """
-        Picks among the actions with the highest Q(s,a).
-        """
-        actions = gameState.getLegalActions(self.index)
-
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
-        values = [self.evaluate(gameState, a) for a in actions]
-        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
-
-        maxValue = max(values)
-        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-
-        foodLeft = len(self.getFood(gameState).asList())
-
-        if foodLeft <= 2:
-            bestDist = 9999
-            for action in actions:
-                successor = self.getSuccessor(gameState, action)
-                pos2 = successor.getAgentPosition(self.index)
-                dist = self.getMazeDistance(self.start, pos2)
-                if dist < bestDist:
-                    bestAction = action
-                    bestDist = dist
-            return bestAction
-
-        return random.choice(bestActions)
-
-    def getSuccessor(self, gameState, action):
-        """
-        Finds the next successor which is a grid position (location tuple).
-        """
-        successor = gameState.generateSuccessor(self.index, action)
-        pos = successor.getAgentState(self.index).getPosition()
-        if pos != nearestPoint(pos):
-            # Only half a grid position was covered
-            return successor.generateSuccessor(self.index, action)
-        else:
-            return successor
-
-    def evaluate(self, gameState, action):
-        """
-        Computes a linear combination of features and feature weights
-        """
-        features = self.getFeatures(gameState, action)
-        weights = self.getWeights(gameState, action)
-        return features * weights
-
-    def getFeatures(self, gameState, action):
-        """
-        Returns a counter of features for the state
-        """
-        features = util.Counter()
-        successor = self.getSuccessor(gameState, action)
-        features['successorScore'] = self.getScore(successor)
-        return features
-
-    def getWeights(self, gameState, action):
-        """
-        Normally, weights do not depend on the gamestate.  They can be either
-        a counter or a dictionary.
-        """
-        return {'successorScore': 1.0}
-
-    def final(self, gameState):
-        CaptureAgent.final(self, gameState)
-
-
-class OffensiveAgent(ReflexCaptureAgent):
-    """
-    A reflex agent that seeks food. This is an agent
-    we give you to get an idea of what an offensive agent might look like,
-    but it is by no means the best or only way to build an offensive agent.
-    """
-
-    def getFeatures(self, gameState, action):
-        features = util.Counter()
-        successor = self.getSuccessor(gameState, action)
-        foodList = self.getFood(successor).asList()
-        features['successorScore'] = -len(foodList)  # self.getScore(successor)
-
-        # Compute distance to the nearest food
-
-        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-            myPos = successor.getAgentState(self.index).getPosition()
-            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = minDistance
-        return features
-
-    def getWeights(self, gameState, action):
-        return {'successorScore': 100, 'distanceToFood': -1}
-
-
-class DefensiveAgent(ReflexCaptureAgent):
-    """
-    A reflex agent that keeps its side Pacman-free. Again,
-    this is to give you an idea of what a defensive agent
-    could be like.  It is not the best or only way to make
-    such an agent.
-    """
-
-    def getFeatures(self, gameState, action):
-        features = util.Counter()
-        successor = self.getSuccessor(gameState, action)
-
-        myState = successor.getAgentState(self.index)
-        myPos = myState.getPosition()
-
-        # Computes whether we're on defense (1) or offense (0)
-        features['onDefense'] = 1
-        if myState.isPacman: features['onDefense'] = 0
-
-        # Computes distance to invaders we can see
-        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        features['numInvaders'] = len(invaders)
-        if len(invaders) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-            features['invaderDistance'] = min(dists)
-
-        if action == Directions.STOP: features['stop'] = 1
-        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-        if action == rev: features['reverse'] = 1
-
-        return features
-
-    def getWeights(self, gameState, action):
-        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}
