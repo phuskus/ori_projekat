@@ -1,4 +1,4 @@
-# Final projects for college subject "Fundamentals of Computer Intelligence"
+# Final projects for college subject "Fundamentals of Computer Intelligence" (Osnovi računarske inteligencije)
 ## Author: Stefan Stegić, SW61/2017
 
 ### 1. Pacman capture
