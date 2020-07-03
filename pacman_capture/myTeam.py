@@ -81,10 +81,12 @@ class StegnutiAgent(CaptureAgent):
             return self.weights
 
     def registerInitialState(self, gameState):
+        CaptureAgent.registerInitialState(self, gameState)
         self.start = gameState.getAgentPosition(self.index)
         self.mazeWidth = gameState.getWalls().width
         self.mazeHeight = gameState.getWalls().height
-        CaptureAgent.registerInitialState(self, gameState)
+        self.maxDist = self.getMazeDistance((1.0, 1.0), (self.mazeWidth-2, self.mazeHeight-2))
+
         print("Epsilon:", self.getEpsilon())
         print("Alpha:", self.alpha)
 
@@ -194,23 +196,22 @@ class StegnutiAgent(CaptureAgent):
         self.alpha = max(self.alpha, self.minAlpha)
         CaptureAgent.final(self, gameState)
 
-
 class OffensiveStegnutiAgent(StegnutiAgent):
     def registerInitialState(self, gameState):
         StegnutiAgent.registerInitialState(self, gameState)
         self.timeElapsed = 0
-        self.override = True
+        self.override = False
         self.overrideWeights = weightsOffensive
 
     def getNearestFoodDistance(self, state):
-        minDist = 100.0
+        minDist = self.maxDist
         myPos = state.getAgentState(self.index).getPosition()
         dist = 0.0
         for food in self.getFood(state).asList():
             dist = self.getMazeDistance(myPos, food)
             if dist < minDist:
                 minDist = dist
-        return minDist / 50.0
+        return minDist / self.maxDist
 
     def getFeatures(self, state, action):
         """
@@ -225,7 +226,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
         features['carryingFood'] = agentState.numCarrying / 20.0
 
         # 2. Distance from nearest defending ghost
-        nearestDefender = 50.0
+        nearestDefender = self.maxDist
         dist = 0.0
         for i in self.getOpponents(nextState):
             a = nextState.getAgentState(i)
@@ -234,7 +235,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
                 if dist < nearestDefender:
                     nearestDefender = dist
 
-        nearestDefender = 1.0 - nearestDefender / 50.0
+        nearestDefender = 1.0 - nearestDefender / self.maxDist
         # Close to zero when far, very steep rize when very close
 
         features['danger'] = 0.000000001 * (math.e ** (20.7 * nearestDefender))
@@ -247,6 +248,13 @@ class OffensiveStegnutiAgent(StegnutiAgent):
 
         # 5. Nearest food
         features['dToFood'] = self.getNearestFoodDistance(nextState)
+
+        # 6. Scared
+        # if agentState.scaredTimer > 0:
+        #     features['scared'] = 1.0
+        # else:
+        #     features['scared'] = 0.0
+
 
         #print(features)
         return features
@@ -301,7 +309,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
             futureEnemyPos = (enemyPos[0] + dir[0], enemyPos[1] + dir[1])
             if myFuturePos == futureEnemyPos:
                 print("Off: Ghosts suck")
-                reward -= 10.0
+                reward -= 200.0
 
         # Eating one pellet of food is good
         blueFood = state.getBlueFood()
@@ -326,7 +334,7 @@ class OffensiveStegnutiAgent(StegnutiAgent):
 class DefensiveStegnutiAgent(StegnutiAgent):
     def registerInitialState(self, gameState):
         StegnutiAgent.registerInitialState(self, gameState)
-        self.override = True
+        self.override = False
         self.overrideWeights = weightsDeffensive
 
     def getNearestFoodDistance(self, state):
@@ -369,6 +377,12 @@ class DefensiveStegnutiAgent(StegnutiAgent):
 
         # 4. Nearest food I am protecting
         #features['nearestFood'] = self.getNearestFoodDistance(nextState)
+
+        # 6. Scared
+        if agentState.scaredTimer > 0:
+            features['scared'] = 1.0
+        else:
+            features['scared'] = 0.0
 
         return features
 
