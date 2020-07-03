@@ -1,5 +1,5 @@
 # Final projects for college subject "Fundamentals of Computer Intelligence"
-# Author: Stefan Stegić, SW61/2017
++Author: Stefan Stegić, SW61/2017
 
 1. Pacman capture
 - Gaming AI
