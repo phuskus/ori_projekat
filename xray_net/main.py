@@ -5,39 +5,52 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
+import numpy as np
 
 def sortImages():
     csv = pandas.read_csv("dataset_raw/metadata/chest_xray_metadata.csv")
+    csv = csv.replace(np.nan, "", regex=True)
     directory = "dataset_raw"
     path = ""
     label = ""
     labels = {}
-    for filename in os.listdir(directory):
+    print("Sorting images into subfolders...")
+    listDir = os.listdir(directory)
+    progressStep = int(0.1 * len(listDir))
+    if not os.path.exists("xrays"):
+        os.mkdir("xrays")
+
+    missingCount = 0
+    for idx, filename in enumerate(listDir):
+        if idx % progressStep == 0:
+            print(str(int(((idx+1) * 100.0) / len(listDir))) + "% complete")
         path = os.path.join(directory, filename)
         if not os.path.isfile(path):
             continue
         try:
-            label = csv.loc[csv["X_ray_image_name"] == filename].iloc[0]['Label']
+            row = csv.loc[csv["X_ray_image_name"] == filename].iloc[0]
         except:
-            print(filename, "not found in csv")
+            #print(filename, "not found in csv")
+            missingCount += 1
             continue
+        label = row['Label'] + row['Label_1_Virus_category']
 
         if label in labels.keys():
             labels[label] += 1
         else:
             labels[label] = 1
 
-        if label == "Pnemonia":
-            # Copy to Pneumonia folder
-            copyfile(path, os.path.join("xrays/Pneumonia", filename))
-        elif label == "Normal":
-            # Copy to Normal folder
-            copyfile(path, os.path.join("xrays/Normal", filename))
-        else:
-            # Copy to Other folder
-            copyfile(path, os.path.join("xrays/Other", filename))
+        dirPath = os.path.join("xrays", label)
+        if not os.path.exists(dirPath):
+            os.mkdir(dirPath)
 
+        copyfile(path, os.path.join(dirPath, filename))
+
+    print("Sorting complete!")
+    print("%d filenames were not found in the CSV" % missingCount)
+    print("Images copied into subdirectories:")
     print(labels)
+    return len(labels)
 
 data_augmentation = keras.Sequential(
         [
@@ -100,7 +113,7 @@ def makeModel(input_shape, num_classes):
 
 if __name__ == '__main__':
     # Sort raw xrays images into subfolders based on label
-    # sortImages()
+    # sortImages
 
     batch_size = 32
     image_size = (224, 224)
@@ -123,27 +136,16 @@ if __name__ == '__main__':
         image_size=image_size
     )
 
-    # Preview dataset
-    # plt.figure(figsize=(10, 10))
-    # for images, labels in train_ds.take(1):
-    #     for i in range(9):
-    #         ax = plt.subplot(3, 3, i + 1)
-    #         plt.imshow(images[i].numpy().astype("uint8"))
-    #         plt.title(int(labels[i]))
-    #         plt.axis("off")
-    # plt.show()
-
-
     # Augment the training dataset
-    train_ds = train_ds.map(
-        lambda x, y: (data_augmentation(x, training=True), y))
+    #train_ds = train_ds.map(
+    #    lambda x, y: (data_augmentation(x, training=True), y))
 
     # Buffer to prevent I/O blocking
     train_ds = train_ds.prefetch(buffer_size=32)
     val_ds = val_ds.prefetch(buffer_size=32)
 
     # Make the model
-    model = makeModel(input_shape=image_size + (3,), num_classes=2)
+    model = makeModel(input_shape=image_size + (3,), num_classes=3)
 
     # Train the model
     epochs = 50
