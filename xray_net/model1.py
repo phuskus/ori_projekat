@@ -6,6 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 import numpy as np
+from tensorflow.keras import applications
 
 def sortImages():
     csv = pandas.read_csv("dataset_raw/metadata/chest_xray_metadata.csv")
@@ -115,25 +116,37 @@ if __name__ == '__main__':
     # Sort raw xrays images into subfolders based on label
     # sortImages
 
+    """
+    Parameters
+    """
     batch_size = 32
+    epochs = 50
     image_size = (224, 224)
 
+    """
+    Prepare training and validation datasets
+    """
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
         "xrays",
-        validation_split=0.2,
+        validation_split=0.1,
         subset="training",
         seed=1337,
         batch_size=batch_size,
-        image_size=image_size
+        image_size=image_size,
+        label_mode="categorical",
+        color_mode="grayscale"
     )
+
 
     val_ds = tf.keras.preprocessing.image_dataset_from_directory(
         "xrays",
-        validation_split=0.2,
+        validation_split=0.1,
         subset="validation",
         seed=1337,
         batch_size=batch_size,
-        image_size=image_size
+        image_size=image_size,
+        label_mode="categorical",
+        color_mode="grayscale"
     )
 
     # Augment the training dataset
@@ -145,19 +158,24 @@ if __name__ == '__main__':
     val_ds = val_ds.prefetch(buffer_size=32)
 
     # Make the model
-    model = makeModel(input_shape=image_size + (3,), num_classes=3)
+    model = makeModel(input_shape=image_size + (1,), num_classes=3)
 
     # Train the model
-    epochs = 50
-    callbacks = [
-        keras.callbacks.ModelCheckpoint("save_at_{epoch}.h5")
-    ]
+    startLr = 1e-3
+
+    def scheduler(epoch, lr):
+        return -startLr / epochs * epoch + startLr
 
     model.compile(
-        optimizer=keras.optimizers.Adam(1e-3),
-        loss="binary_crossentropy",
+        optimizer=keras.optimizers.RMSprop(learning_rate=startLr),
+        loss="categorical_crossentropy",
         metrics=["accuracy"]
     )
+
+    callbacks = [
+        keras.callbacks.ModelCheckpoint("save_at_{epoch}.h5"),
+        keras.callbacks.LearningRateScheduler(scheduler)
+    ]
 
     model.fit(
         train_ds, epochs=epochs, callbacks=callbacks, validation_data=val_ds
