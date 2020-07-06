@@ -64,7 +64,7 @@ def makeModel(input_shape, learning_rate):
 
     model = keras.Model(inputs, outputs)
     model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
+        optimizer=keras.optimizers.SGD(momentum=0.01, nesterov=True),
         loss="categorical_crossentropy",
         metrics=[
             keras.metrics.categorical_accuracy
