@@ -4,7 +4,7 @@ from tensorflow.keras import layers
 
 batch_size = 32
 epochs = 50
-learning_rate = 1e-3
+learning_rate = 1e-4
 image_size = (224, 224)
 color_mode = "grayscale"
 
@@ -66,11 +66,13 @@ def makeModel(input_shape, learning_rate):
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
         loss="categorical_crossentropy",
-        metrics=["accuracy"]
+        metrics=[
+            keras.metrics.categorical_accuracy
+        ]
     )
 
     callbacks = [
-        keras.callbacks.ModelCheckpoint("train_checkpoints/save_at_{epoch}.h5")
+        keras.callbacks.ModelCheckpoint("./train_checkpoints/save_at_{epoch}.h5")
     ]
 
     return model, callbacks

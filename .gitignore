@@ -1,3 +1,2 @@
-*.h5
 xray_net/dataset_raw/*
 xray_net/xrays/*
