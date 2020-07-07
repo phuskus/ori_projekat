@@ -3,18 +3,18 @@ import numpy as np
 import os
 from shutil import copyfile
 
-def sortImages():
-    csv = pandas.read_csv("dataset_raw/metadata/chest_xray_metadata.csv")
+def sortImages(csvPath, imgFolderPath, outputFolderPath):
+    csv = pandas.read_csv(csvPath)
     csv = csv.replace(np.nan, "", regex=True)
-    directory = "dataset_raw"
+    directory = imgFolderPath
     path = ""
     label = ""
     labels = {}
     print("Sorting images into subfolders...")
     listDir = os.listdir(directory)
     progressStep = int(0.1 * len(listDir))
-    if not os.path.exists("xrays"):
-        os.mkdir("xrays")
+    if not os.path.exists(outputFolderPath):
+        os.mkdir(outputFolderPath)
 
     missingCount = 0
     for idx, filename in enumerate(listDir):
@@ -36,7 +36,7 @@ def sortImages():
         else:
             labels[label] = 1
 
-        dirPath = os.path.join("xrays", label)
+        dirPath = os.path.join(outputFolderPath, label)
         if not os.path.exists(dirPath):
             os.mkdir(dirPath)
 

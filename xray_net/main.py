@@ -6,7 +6,7 @@ import util
 
 if __name__ == '__main__':
     # Sort raw xrays images into subfolders based on label
-    # util.sortImages()
+    # util.sortImages("dataset_raw/metadata/chest_xray_metadata.csv", "dataset_raw", "xrays")
 
     """
     Quick model and config selection
